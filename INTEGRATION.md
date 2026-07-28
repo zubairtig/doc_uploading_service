@@ -40,7 +40,7 @@ Plus the special type **`creditor_liaison`** for **call recordings** (audio).
 ```
 <reference>__<client_name>/
   docs/
-    proof_of_id/
+    id_proof/
       passport.png
       passport.json          # OCR result (only if ocr=true)
     bank_statement/
@@ -146,14 +146,14 @@ fresh tokenised link for one `(reference, doc_type)`.
 
 Request (JSON):
 ```json
-{ "reference": "324991", "doc_type": "proof_of_id", "name": "Theresa Topp" }
+{ "reference": "324991", "doc_type": "id_proof", "name": "Theresa Topp" }
 ```
 `name` is optional (falls back to the case's existing name). Response `201`:
 ```json
 {
-  "doc_type": "proof_of_id",
+  "doc_type": "id_proof",
   "label": "ID Proof (Legacy)",
-  "url": "http://192.168.80.52:2311/u/324991/proof_of_id/<token>",
+  "url": "http://192.168.80.52:2311/u/324991/id_proof/<token>",
   "token": "<token>",
   "status": "pending",
   "expires_at": "2026-08-04T10:46:37Z"
@@ -216,13 +216,13 @@ Response `201` (example, `ocr=true`):
   "id": "uuid",
   "tenant_id": "uuid",
   "owner_ref": "324991",
-  "document_type": "proof_of_id",
-  "original_document_type": "proof_of_id",
+  "document_type": "id_proof",
+  "original_document_type": "id_proof",
   "file_name": "passport.png",
   "mime_type": "image/png",
   "file_size": 106236,
-  "s3_url": "http://192.168.80.52:2311/files/324991__Theresa_Topp/docs/proof_of_id/passport.png",
-  "s3_url_ocr_json": "http://192.168.80.52:2311/files/324991__Theresa_Topp/docs/proof_of_id/passport.json",
+  "s3_url": "http://192.168.80.52:2311/files/324991__Theresa_Topp/docs/id_proof/passport.png",
+  "s3_url_ocr_json": "http://192.168.80.52:2311/files/324991__Theresa_Topp/docs/id_proof/passport.json",
   "ocr_status": "done",
   "ocr_text": "…extracted text…",
   "ocr_error": null,
@@ -305,7 +305,7 @@ curl -s -X POST "http://192.168.80.52:2311/v1/documents" \
   -H "Authorization: Bearer <API_KEY>" \
   -F "file=@passport.png;type=image/png" \
   -F "owner_ref=324991" \
-  -F "document_type=proof_of_id" \
+  -F "document_type=id_proof" \
   -F "uploaded_by=Theresa Topp" \
   -F "ocr=true"
 ```
@@ -348,7 +348,7 @@ with open("passport.png", "rb") as f:
         files={"file": ("passport.png", f, "image/png")},
         data={
             "owner_ref": "324991",
-            "document_type": "proof_of_id",
+            "document_type": "id_proof",
             "uploaded_by": "Theresa Topp",
             "ocr": "true",
         },
