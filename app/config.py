@@ -80,6 +80,22 @@ class Settings(BaseSettings):
         "image/webp",
     ]
 
+    # Call recordings (document_type == "creditor_liaison"): larger cap +
+    # audio types. Recordings are stored under <case>/creditor_liaison/ and
+    # are never OCR'd.
+    recording_max_bytes: int = 200 * 1024 * 1024
+    upload_recording_mime_allowlist: list[str] = [
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/wav",
+        "audio/x-wav",
+        "audio/wave",
+        "audio/mp4",
+        "audio/x-m4a",
+        "audio/aac",
+        "audio/ogg",
+    ]
+
     # OCR provider (spec §10)
     ocr_api_key: str = ""
     ocr_default_language: str = "eng"

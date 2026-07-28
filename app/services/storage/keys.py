@@ -27,15 +27,30 @@ def sanitize_filename(name: str | None) -> str:
     return base or "file"
 
 
+# Layout within a case folder:
+#   <case>/docs/<doc_type>/...        normal documents (+ .json if OCR)
+#   <case>/creditor_liaison/...       call recordings (sibling of docs/)
+DOCS_DIR = "docs"
+RECORDINGS_TYPE = "creditor_liaison"
+
+
 def case_folder(reference: str, client_name: str | None) -> str:
     return f"{slugify(reference)}__{slugify(client_name)}"
 
 
+def folder_for(reference: str, client_name: str | None, doc_type: str) -> str:
+    """The folder a given doc_type lives in, inside the case folder."""
+    case = case_folder(reference, client_name)
+    if doc_type == RECORDINGS_TYPE:
+        return f"{case}/{RECORDINGS_TYPE}"
+    return f"{case}/{DOCS_DIR}/{doc_type}"
+
+
 def doc_key(reference: str, client_name: str | None, doc_type: str, file_name: str) -> str:
-    return f"{case_folder(reference, client_name)}/{doc_type}/{sanitize_filename(file_name)}"
+    return f"{folder_for(reference, client_name, doc_type)}/{sanitize_filename(file_name)}"
 
 
 def json_key(reference: str, client_name: str | None, doc_type: str, file_name: str) -> str:
     fn = sanitize_filename(file_name)
     stem = fn.rsplit(".", 1)[0] if "." in fn else fn
-    return f"{case_folder(reference, client_name)}/{doc_type}/{stem}.json"
+    return f"{folder_for(reference, client_name, doc_type)}/{stem}.json"

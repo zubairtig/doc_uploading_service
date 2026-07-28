@@ -127,9 +127,71 @@ Invoke-RestMethod "http://192.168.80.52:2311/v1/document-requests?reference=3249
 
 ---
 
-## 2. Documents API (read)
+## 2. Documents API
 
-These work with the locally-stored portal documents.
+These work with the locally-stored documents.
+
+### 2.0 Upload a document (with optional OCR)
+`POST /v1/documents` — multipart form. Stores the file under
+`<owner_ref>__<name>/<document_type>/`. When `ocr=true`, OCR runs synchronously
+and a JSON sidecar (`<file>.json`) is saved next to it.
+
+**Form fields**
+| Field | Required | Notes |
+| --- | --- | --- |
+| `file` | yes | the document (PDF/DOC/DOCX/XLS/XLSX/JPG/PNG/WebP, ≤10 MB) |
+| `owner_ref` | yes | case reference |
+| `document_type` | yes | e.g. `proof_of_id` |
+| `uploaded_by` | yes | who uploaded |
+| `ocr` | no | `true` = OCR the file + store JSON (default `false`) |
+| `client_name` | no | case name for the folder (else taken from generated links / `uploaded_by`) |
+| `metadata` | no | JSON object string |
+
+**curl**
+```bash
+curl -s -X POST "http://192.168.80.52:2311/v1/documents" \
+  -H "Authorization: Bearer $API_KEY" \
+  -F "file=@/path/to/passport.png;type=image/png" \
+  -F "owner_ref=324991" \
+  -F "document_type=proof_of_id" \
+  -F "uploaded_by=Theresa Topp" \
+  -F "ocr=true"
+```
+
+**PowerShell**
+```powershell
+$form = @{
+  file          = Get-Item "C:\path\passport.png"
+  owner_ref     = "324991"
+  document_type = "proof_of_id"
+  uploaded_by   = "Theresa Topp"
+  ocr           = "true"
+}
+Invoke-RestMethod -Method Post "http://192.168.80.52:2311/v1/documents" `
+  -Headers @{ Authorization = "Bearer $API_KEY" } -Form $form
+```
+
+**Response `201`** (with `ocr=true`)
+```json
+{
+  "id": "….",
+  "owner_ref": "324991",
+  "document_type": "proof_of_id",
+  "file_name": "passport.png",
+  "mime_type": "image/png",
+  "s3_url": "http://192.168.80.52:2311/files/324991__Theresa_Topp/proof_of_id/passport.png",
+  "s3_url_ocr_json": "http://192.168.80.52:2311/files/324991__Theresa_Topp/proof_of_id/passport.json",
+  "ocr_status": "done",
+  "ocr_text": "…extracted text…",
+  "ocr_error": null,
+  "...": "..."
+}
+```
+- `ocr=false` → `ocr_status: "not_requested"`, `s3_url_ocr_json: null`, no JSON written.
+- If OCR fails, the file is still stored; `ocr_status: "failed"` with `ocr_error`.
+
+### Read endpoints
+These work with the locally-stored documents.
 
 ### 2.1 List documents for a case
 `GET /v1/documents?owner_ref=<ref>`
@@ -257,10 +319,8 @@ These endpoints exist in the code but require **S3** and/or the **Celery/OCR wor
 
 | Endpoint | Needs |
 | --- | --- |
-| `POST /v1/documents` (direct upload) | S3 bucket. Use the portal `/u/...` upload instead. |
-| `DELETE /v1/documents/{id}` | S3 (deletes S3 prefix) |
-| `POST /v1/documents/{id}/ocr` | Celery worker + OCR provider |
-| `GET /v1/documents/{id}/ocr-json` | OCR to have run (returns 404 otherwise) |
+| `POST /v1/documents/{id}/ocr` | Celery worker (async re-OCR — use `ocr=true` on upload instead) |
+| `DELETE /v1/documents/{id}` | Currently deletes via S3 prefix; local delete not wired |
 
 ---
 

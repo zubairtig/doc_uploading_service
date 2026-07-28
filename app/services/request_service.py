@@ -22,13 +22,34 @@ from app.core import doc_types
 from app.models.document import Document, OcrStatus
 from app.models.document_request import DocumentRequest, DocumentRequestStatus
 from app.models.tenant import Tenant
-from app.services.document_service import _validate_upload
 from app.services.ocr import extract_flat_text, perform_ocr
 from app.services.storage import get_storage_backend, keys
 
 logger = logging.getLogger(__name__)
 
 _TOKEN_BYTES = 32
+
+
+def _validate_upload_for(file_bytes: bytes, mime_type: str, doc_type: str) -> None:
+    """Validate size + mime, with a larger cap and audio allowlist for
+    call recordings (doc_type == 'creditor_liaison')."""
+    is_recording = doc_type == keys.RECORDINGS_TYPE
+    max_bytes = settings.recording_max_bytes if is_recording else settings.upload_max_bytes
+    allowlist = (
+        settings.upload_recording_mime_allowlist
+        if is_recording
+        else settings.upload_mime_allowlist
+    )
+    if len(file_bytes) > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File exceeds maximum size of {max_bytes} bytes",
+        )
+    if mime_type not in allowlist:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail=f"Unsupported mime type: {mime_type}",
+        )
 
 
 def build_link_url(reference: str, doc_type: str, token: str) -> str:
@@ -98,12 +119,13 @@ async def create_request_batch(
     for req in requests:
         await db.refresh(req)
 
-    # Pre-create the case folder with one empty subfolder per doc type, so the
-    # 27-folder layout exists on disk as soon as the case is initiated.
+    # Pre-create the case layout on disk as soon as the case is initiated:
+    #   <case>/docs/<doc_type>/   (27 folders)
+    #   <case>/creditor_liaison/  (call recordings)
     backend = get_storage_backend("local")
-    case = keys.case_folder(reference, name)
     for slug in doc_types.all_slugs():
-        backend.ensure_dir(f"{case}/{slug}")
+        backend.ensure_dir(keys.folder_for(reference, name, slug))
+    backend.ensure_dir(keys.folder_for(reference, name, keys.RECORDINGS_TYPE))
 
     return batch_id, requests
 
@@ -144,8 +166,12 @@ async def store_local_document(
 
     OCR runs synchronously via the OCR.space provider. OCR failure does NOT
     fail the upload — the doc is stored with ocr_status='failed' + the error.
+    Call recordings (doc_type='creditor_liaison') are never OCR'd.
     """
-    _validate_upload(file_bytes, mime_type)
+    _validate_upload_for(file_bytes, mime_type, doc_type)
+    # Recordings are audio — never OCR them, whatever the flag says.
+    if doc_type == keys.RECORDINGS_TYPE:
+        run_ocr = False
 
     backend = get_storage_backend("local")
     dkey = keys.doc_key(reference, client_name, doc_type, file_name)
