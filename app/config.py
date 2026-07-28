@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     # tenant is used; ambiguous when more than one tenant exists.
     portal_tenant_name: Optional[str] = None
 
+    # CORS: comma-separated list of allowed origins for browser calls
+    # (e.g. an integrator frontend POSTing uploads directly). "*" = any.
+    cors_allow_origins: str = "*"
+
     # Database
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/upload_doc"

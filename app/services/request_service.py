@@ -254,6 +254,45 @@ async def store_local_document(
     return doc
 
 
+async def create_single_request(
+    db: AsyncSession,
+    *,
+    tenant: Tenant,
+    reference: str,
+    doc_type: str,
+    name: str | None = None,
+) -> DocumentRequest:
+    """Mint ONE fresh upload link for a single (reference, doc_type).
+
+    For on-demand / repeated uploads without re-minting the whole batch. The
+    client name is taken from ``name`` if given, else from the case's existing
+    links, else left null.
+    """
+    client_name = name or await client_name_for_reference(
+        db, tenant=tenant, reference=reference
+    )
+    req = DocumentRequest(
+        tenant_id=tenant.id,
+        batch_id=uuid.uuid4(),
+        reference=reference,
+        client_name=client_name,
+        doc_type=doc_type,
+        token=secrets.token_urlsafe(_TOKEN_BYTES),
+        status=DocumentRequestStatus.PENDING,
+        expires_at=datetime.now(timezone.utc)
+        + timedelta(days=settings.document_request_ttl_days),
+    )
+    db.add(req)
+    await db.commit()
+    await db.refresh(req)
+
+    # Make sure the target folder exists on disk.
+    get_storage_backend("local").ensure_dir(
+        keys.folder_for(reference, client_name, doc_type)
+    )
+    return req
+
+
 async def list_requests_for_reference(
     db: AsyncSession, *, tenant: Tenant, reference: str
 ) -> tuple[list[DocumentRequest], dict]:

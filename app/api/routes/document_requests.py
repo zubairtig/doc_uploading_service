@@ -18,6 +18,7 @@ from app.schemas.document_request import (
     LinkOut,
     RequestItemOut,
     RequestListOut,
+    SingleRequestCreate,
     UploadedDocOut,
 )
 from app.services import request_service
@@ -50,6 +51,33 @@ async def create_document_requests(
         reference=body.reference,
         client_name=body.name,
         links=links,
+    )
+
+
+@router.post("/token", response_model=LinkOut, status_code=status.HTTP_201_CREATED)
+async def mint_single_token(
+    body: SingleRequestCreate,
+    tenant: Tenant = Depends(get_current_tenant),
+    db: AsyncSession = Depends(get_db),
+):
+    """Mint one fresh upload link for a single (reference, doc_type).
+
+    Use for on-demand / repeated uploads without re-minting the whole batch.
+    """
+    req = await request_service.create_single_request(
+        db,
+        tenant=tenant,
+        reference=body.reference,
+        doc_type=body.doc_type,
+        name=body.name,
+    )
+    return LinkOut(
+        doc_type=req.doc_type,
+        label=doc_types.label_for(req.doc_type),
+        url=request_service.build_link_url(req.reference, req.doc_type, req.token),
+        token=req.token,
+        status=req.status,
+        expires_at=req.expires_at,
     )
 
 

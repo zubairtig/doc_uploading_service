@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi import _rate_limit_exceeded_handler
@@ -25,6 +26,16 @@ app = FastAPI(
     title=settings.app_name,
     debug=settings.app_debug,
     lifespan=lifespan,
+)
+
+# CORS — lets integrator frontends call the API / upload directly from a
+# browser. Origins configurable via CORS_ALLOW_ORIGINS (comma-separated).
+_cors_origins = [o.strip() for o in settings.cors_allow_origins.split(",") if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins or ["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Rate limiting (spec §15.4 — see app/core/rate_limit.py for defaults).

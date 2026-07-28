@@ -11,6 +11,14 @@ class DocumentRequestCreate(BaseModel):
     reference: str
 
 
+class SingleRequestCreate(BaseModel):
+    """Mint a single fresh upload link for one (reference, doc_type)."""
+
+    reference: str
+    doc_type: str
+    name: str | None = None
+
+
 class LinkOut(BaseModel):
     doc_type: str
     label: str
