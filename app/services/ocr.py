@@ -33,7 +33,7 @@ def perform_ocr(file_bytes: bytes, content_type: str, *, is_table: bool, file_na
     data = {
         "apikey": settings.ocr_api_key,
         "language": settings.ocr_default_language,
-        "isOverlayRequired": "false",
+        "isOverlayRequired": "true" if settings.ocr_include_overlay else "false",
         "OCREngine": "2",
         "scale": "true",
         "isTable": "true" if is_table else "false",

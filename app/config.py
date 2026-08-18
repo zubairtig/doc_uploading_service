@@ -71,8 +71,9 @@ class Settings(BaseSettings):
     # we just regenerate on every read).
     s3_presigned_url_expires_seconds: int = 7 * 24 * 60 * 60
 
-    # Upload constraints (spec §6.1)
-    upload_max_bytes: int = 10 * 1024 * 1024
+    # Upload constraints (spec §6.1). 50 MB to match the consuming backend's
+    # cap so large scanned statements aren't rejected on the portal side.
+    upload_max_bytes: int = 50 * 1024 * 1024
     upload_mime_allowlist: list[str] = [
         "application/pdf",
         "application/msword",
@@ -103,6 +104,9 @@ class Settings(BaseSettings):
     # OCR provider (spec §10)
     ocr_api_key: str = ""
     ocr_default_language: str = "eng"
+    # Include word x/y positions ("overlay") in the OCR JSON, so table-style
+    # docs (payslips etc.) can be parsed by coordinates without re-OCRing.
+    ocr_include_overlay: bool = True
     ocr_request_timeout_seconds: float = 60.0
     ocr_table_mode_document_types: list[str] = [
         "bank_statement",

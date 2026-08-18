@@ -55,7 +55,7 @@ Filenames are sanitised (spaces/specials → `_`). Files persist on a host volum
 ### 1.3 Limits
 | | Max size | Allowed types |
 | --- | --- | --- |
-| Documents | 10 MB | PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, WebP |
+| Documents | 50 MB | PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, WebP |
 | Recordings (`creditor_liaison`) | 200 MB | MP3, WAV, M4A, AAC, OGG |
 
 ---
@@ -374,6 +374,9 @@ for d in docs["results"]:
 - **OCR failure never loses the file:** the document is stored with
   `ocr_status: "failed"` and an `ocr_error`.
 - **Recordings never OCR:** `document_type=creditor_liaison` ignores `ocr`.
+- **OCR overlay included:** the stored OCR JSON contains word x/y positions
+  (`ParsedResults[].TextOverlay`), so table docs (payslips) can be parsed by
+  coordinates without re-OCRing.
 - **Preview URLs** (`s3_url`, `file_url`) are directly openable in a browser and
   render inline (correct content type). Filenames with spaces are sanitised.
 - **One-time links:** a client link works once; re-use returns `409`; it also
