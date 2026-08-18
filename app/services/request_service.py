@@ -325,6 +325,18 @@ def effective_status(req: DocumentRequest) -> str:
     return req.status
 
 
+async def delete_document_local(db: AsyncSession, *, document: Document) -> None:
+    """Delete a locally-stored document: its file, its OCR JSON sidecar (if
+    any), and the DB row. Any DocumentRequest pointing at it is set NULL via
+    the FK ondelete rule."""
+    backend = get_storage_backend("local")
+    for url in (document.s3_url, document.s3_url_ocr_json):
+        if url and "/files/" in url:
+            backend.delete(url.split("/files/", 1)[-1])
+    await db.delete(document)
+    await db.commit()
+
+
 async def get_by_token(
     db: AsyncSession, *, reference: str, doc_type: str, token: str
 ) -> DocumentRequest | None:

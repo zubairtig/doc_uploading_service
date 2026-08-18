@@ -230,7 +230,12 @@ async def delete_document(
     db: AsyncSession = Depends(get_db),
 ):
     document = await document_service.get_document_for_tenant(db, tenant=tenant, doc_id=doc_id)
-    await document_service.delete_document(db, document)
+    # Local-storage docs (or no S3 bucket configured) → delete from the
+    # filesystem; only use the S3 prefix delete for real S3-backed docs.
+    if not settings.aws_s3_bucket_name or "/files/" in (document.s3_url or ""):
+        await request_service.delete_document_local(db, document=document)
+    else:
+        await document_service.delete_document(db, document)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

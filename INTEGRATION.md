@@ -260,6 +260,14 @@ Public alternative: open the document's `s3_url` (`/files/...`) directly.
 JSON body; editable fields only: `document_type`, `metadata`, `uploaded_by`.
 Optional `?metadata_mode=merge|replace` (default `merge`). Returns the document.
 
+### 4.7a `DELETE /v1/documents/{id}` — delete a document
+Removes the stored file, its OCR JSON sidecar (if any), and the DB record.
+Returns `204`. Any upload link that pointed at it is unlinked.
+```bash
+curl -s -X DELETE "http://192.168.80.52:2311/v1/documents/<doc_id>" \
+  -H "Authorization: Bearer <API_KEY>" -w "%{http_code}"
+```
+
 ### 4.8 `GET /v1/documents/{id}/text` — OCR text status
 ```json
 { "ocr_status": "done", "ocr_text": "…", "ocr_error": null }
