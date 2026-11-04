@@ -1,28 +1,71 @@
 {% extends "base.html" %}
 {% block title %}Upload Documents — {{ reference }}{% endblock %}
+{% block nav_generate %}on{% endblock %}
 {% block content %}
-  <h1>{{ name }} <span class="sub" style="font-size:1rem">· {{ reference }}</span></h1>
-  <p class="sub">{{ links|length }} document links generated. Upload here, or share a link with the client.</p>
-
-  <div class="card">
-    <div class="tabs">
-      {% for link in links %}
-        <button class="tab-btn {% if loop.first %}active{% endif %}" data-key="{{ link.doc_type }}">
-          {{ link.label }}<span class="dot"></span>
-        </button>
-      {% endfor %}
-    </div>
-
-    {% for link in links %}
-      <div class="tab-panel {% if loop.first %}active{% endif %}" data-key="{{ link.doc_type }}">
-        {% include "_upload_form.html" %}
-        <div class="link-line">
-          <span>Shareable link: {{ link.url }}</span>
-          <button class="ghost" data-copy="{{ link.url }}">Copy</button>
-        </div>
+  <div class="client">
+    <div class="avatar">{% for w in name.split()[:2] %}{{ w[0]|upper }}{% endfor %}</div>
+    <div>
+      <h1>{{ name }}</h1>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span class="chip">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></svg>
+          Ref {{ reference }}
+        </span>
+        <span class="chip">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+          {{ links|length }} links generated
+        </span>
       </div>
-    {% endfor %}
+    </div>
+    <div class="progress-box">
+      <div class="progress-top"><span style="color:var(--muted)">Documents received</span><b data-progress-count>0 / {{ links|length }}</b></div>
+      <div class="bar"><i data-progress-bar></i></div>
+    </div>
   </div>
 
-  <a href="/staff"><button class="ghost">← New search</button></a>
+  <div class="workspace">
+    <aside class="sidebar">
+      <div class="field">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" placeholder="Find document type…" data-tab-filter aria-label="Filter document types">
+      </div>
+      <div class="tabs" role="tablist">
+        {% for link in links %}
+          <button type="button" class="tab-btn {% if loop.first %}active{% endif %}" data-key="{{ link.doc_type }}">
+            <span>{{ link.label }}</span><span class="dot{% if link.status == 'submitted' %} done{% endif %}"></span>
+          </button>
+        {% endfor %}
+      </div>
+    </aside>
+
+    <section class="card" style="margin:0">
+      {% for link in links %}
+        <div class="tab-panel {% if loop.first %}active{% endif %}" data-key="{{ link.doc_type }}">
+          <div class="panel-head">
+            <div class="panel-ic">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+            </div>
+            <div>
+              <h2>{{ link.label }}</h2>
+              <p class="sub" style="font-size:.9rem">Upload on {{ name.split()[0] }}'s behalf, or share the secure link below.</p>
+            </div>
+          </div>
+
+          {% include "_upload_form.html" %}
+
+          <div class="share">
+            <span class="label">Shareable client link</span>
+            <div class="link-line">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>
+              <code title="{{ link.url }}">{{ link.url }}</code>
+              <button type="button" class="ghost" data-copy="{{ link.url }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </section>
+  </div>
 {% endblock %}

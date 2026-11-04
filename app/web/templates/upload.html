@@ -1,28 +1,56 @@
 {% extends "base.html" %}
 {% block title %}Upload {{ link.label if link else label }}{% endblock %}
+{% block topbar %}
+  <header class="topbar">
+    <div class="topbar-in" style="justify-content:center">
+      <span class="brand">
+        <span class="brand-mark">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="m9 14 2 2 4-4"/></svg>
+        </span>
+        Secure Document Upload
+      </span>
+    </div>
+  </header>
+{% endblock %}
 {% block content %}
   {% if state == "live" %}
-    <h1>Upload {{ link.label }}</h1>
-    <p class="sub">Reference {{ link.reference }}</p>
-    <div class="card">
+    <div class="card center-card">
+      <div class="state-ic accent">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>
+      </div>
+      <h1 style="font-size:1.6rem">Upload your {{ link.label }}</h1>
+      <p class="sub" style="margin-bottom:24px">Reference <b style="color:var(--fg-2)">{{ link.reference }}</b> · This link can be used once.</p>
       {% include "_upload_form.html" %}
+      <div class="trust">
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Encrypted transfer</span>
+        <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Private to your case</span>
+      </div>
     </div>
   {% elif state == "submitted" %}
-    <h1>{{ link.label }}</h1>
-    <div class="card">
+    <div class="card center-card">
+      <div class="state-ic ok">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+      </div>
       <span class="badge submitted">Already submitted</span>
-      <p class="sub" style="margin-top:12px">This document has already been uploaded. The link is no longer active.</p>
+      <h1 style="font-size:1.5rem;margin-top:12px">{{ link.label }}</h1>
+      <p class="sub">This document has already been uploaded, so the link is no longer active. Nothing more is needed from you.</p>
     </div>
   {% elif state == "expired" %}
-    <h1>{{ link.label }}</h1>
-    <div class="card">
+    <div class="card center-card">
+      <div class="state-ic warn">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      </div>
       <span class="badge expired">Expired</span>
-      <p class="sub" style="margin-top:12px">This upload link has expired. Please request a new one.</p>
+      <h1 style="font-size:1.5rem;margin-top:12px">{{ link.label }}</h1>
+      <p class="sub">This upload link has expired. Please contact us and we'll send you a new one.</p>
     </div>
   {% else %}
-    <h1>Link not found</h1>
-    <div class="card">
-      <p class="sub">This upload link is invalid. Check the address, or request a new link.</p>
+    <div class="card center-card">
+      <div class="state-ic err">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/></svg>
+      </div>
+      <h1 style="font-size:1.5rem">Link not found</h1>
+      <p class="sub">This upload link is invalid. Check the address, or ask us for a new link.</p>
     </div>
   {% endif %}
 {% endblock %}
