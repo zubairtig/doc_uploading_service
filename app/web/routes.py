@@ -24,7 +24,7 @@ from app.config import settings
 from app.core import doc_types
 from app.models.document import Document
 from app.models.tenant import Tenant
-from app.services import request_service
+from app.services import categorisation_service, request_service
 from app.services.storage import get_storage_backend
 from app.web.templating import templates
 
@@ -174,6 +174,11 @@ async def upload_submit(
     except Exception as exc:  # surfaces validation (size/mime) as a message
         detail = getattr(exc, "detail", None) or str(exc)
         return JSONResponse({"ok": False, "message": str(detail)}, status_code=400)
+
+    if categorisation_service.wants(req.doc_type):
+        await categorisation_service.queue_for_case(
+            tenant_id=req.tenant_id, owner_ref=req.reference, client_name=req.client_name
+        )
 
     return JSONResponse(
         {"ok": True, "message": f"Uploaded {doc.file_name}.", "doc_id": str(doc.id)}

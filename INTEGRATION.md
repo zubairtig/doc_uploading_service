@@ -275,6 +275,47 @@ curl -s -X DELETE "http://192.168.80.52:2311/v1/documents/<doc_id>" \
 
 ---
 
+### 4.8a Bank-statement categorisation (LedgerFlow)
+When `CATEGORISER_ENABLED=true`, every upload of a `bank_statement` (through
+`POST /v1/documents` **or** a client upload link) triggers categorisation of
+the whole case:
+
+1. A run is queued, then waits `CATEGORISER_DEBOUNCE_SECONDS` (default 20s) so
+   that several statements uploaded together go as **one** LedgerFlow job.
+2. **Every** `bank_statement` on the case is sent to LedgerFlow v2
+   (`POST {CATEGORISER_URL}/v1/statement-jobs`), with the case's `client_name`
+   as the account holder (for self-transfer detection) and `owner_ref` as the
+   reference. The original files are sent, not OCR text.
+3. The job is polled until it finishes, and LedgerFlow's ledger is stored.
+
+LedgerFlow v2 reads **PDF and image** statements only. Word/Excel files come
+back in `file_errors`. Images also need LedgerFlow's `VISION_ENABLED`.
+
+`GET /v1/categorisation?owner_ref=324991` returns the case's result:
+```json
+{
+  "owner_ref": "324991",
+  "enabled": true,
+  "latest":    { "id": "...", "status": "done", "documents": [{"id": "...", "file_name": "jan.pdf"}],
+                 "file_errors": [], "match_rate": 0.86, "error": null, ... },
+  "completed": { ...the newest run with status "done"... },
+  "ledger": {
+    "groups": [ { "name": "Housing", "labels": [ { "label": "Rent", "transactions": [ ... ] } ] } ],
+    "gambling": [], "transfers": [], "self_transfers": [], "family_transfers": [],
+    "unmapped_transactions": [], "total_money_in": 1850.0, "total_money_out": 1432.1,
+    "large_singles_outflow": [], "cumulative_outflow": [], "warnings": []
+  }
+}
+```
+`latest.status` is one of `pending`, `processing`, `done`, `failed` (see
+`latest.error`). `ledger.groups` is the expenditure breakdown. Income,
+creditor and bank-fee rows are in `unmapped_transactions`: they are not
+SFS expenditure lines.
+
+- `GET /v1/categorisation/runs?owner_ref=...` returns the run history.
+- `POST /v1/categorisation` with `{"owner_ref": "324991", "client_name": "..."}`
+  re-runs the categorisation now (`202`).
+
 ### 4.9 Public pages (browser, no auth)
 | Endpoint | Method | Purpose |
 | --- | --- | --- |

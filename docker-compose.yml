@@ -27,6 +27,12 @@ services:
       # OCR.space key — interpolated from a server-side .env (kept out of repo).
       # When set, uploads with ocr=true are OCR'd + a .json sidecar is stored.
       OCR_API_KEY: ${OCR_API_KEY:-}
+      # Bank-statement categorisation by LedgerFlow v2. Off by default: when
+      # on, every bank_statement on a case is sent to LedgerFlow. The key must
+      # be one of LedgerFlow's SERVICE_API_KEYS. Set all three in the server .env.
+      CATEGORISER_ENABLED: ${CATEGORISER_ENABLED:-false}
+      CATEGORISER_URL: ${CATEGORISER_URL:-}
+      CATEGORISER_API_KEY: ${CATEGORISER_API_KEY:-}
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
       - "2311:8000"

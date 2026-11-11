@@ -123,6 +123,28 @@ class Settings(BaseSettings):
     base64_service_timeout_seconds: float = 60.0
     base64_max_retries: int = 3
 
+    # Bank-statement categorisation (LedgerFlow v2, /v1/statement-jobs).
+    # When a document of one of `categoriser_document_types` lands on a case,
+    # every such document on that case is sent to LedgerFlow as ONE job and
+    # the categorised ledger (income, expenditure lines, transfers, gambling)
+    # is stored in `categorisation_run`. Off unless switched on: bank
+    # statements leave this service when it is.
+    categoriser_enabled: bool = False
+    categoriser_url: str = ""          # e.g. http://192.168.80.52:8320
+    categoriser_api_key: str = ""      # one of LedgerFlow's SERVICE_API_KEYS
+    categoriser_document_types: list[str] = ["bank_statement"]
+    # A client often uploads several statements a minute apart, one link
+    # each. Waiting this long after the last one sends them as one job
+    # instead of one job per file.
+    categoriser_debounce_seconds: float = 20.0
+    categoriser_poll_seconds: float = 5.0
+    # Give up on a job that has not finished in this long.
+    categoriser_job_timeout_seconds: float = 30 * 60
+    # Per HTTP call; the submit carries up to 30 statements.
+    categoriser_request_timeout_seconds: float = 120.0
+    # Times a job is re-sent after LedgerFlow lost it (restart, 404).
+    categoriser_max_resubmits: int = 2
+
 
 @lru_cache
 def get_settings() -> Settings:
