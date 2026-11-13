@@ -67,6 +67,10 @@ class CategorisationRun(Base):
     file_errors: Mapped[list[Any]] = mapped_column(
         JSONB, nullable=False, server_default=text("'[]'::jsonb")
     )
+    # LedgerFlow's /summary: SFS group -> label -> transactions with all-time,
+    # latest-month and monthly figures; every row by category -> subcategory.
+    # None when LedgerFlow has no /summary route (older deploy): ledger only.
+    summary: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     match_rate: Mapped[float | None] = mapped_column(nullable=True)
     error: Mapped[str | None] = mapped_column(String, nullable=True)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))

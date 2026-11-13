@@ -32,7 +32,7 @@ from app.config import settings
 from app.db.session import AsyncSessionLocal
 from app.models.categorisation_run import CategorisationRun, CategorisationStatus
 from app.models.document import Document
-from app.services import categoriser_client
+from app.services import categoriser_client, results_notifier
 from app.services.storage import get_storage_backend
 
 logger = logging.getLogger(__name__)
@@ -242,6 +242,7 @@ async def _finish(run_id: uuid.UUID, outcome: categoriser_client.Outcome,
         run.status = CategorisationStatus.DONE if outcome.ok else CategorisationStatus.FAILED
         run.ledgerflow_job_id = outcome.job_id or run.ledgerflow_job_id
         run.result = outcome.ledger
+        run.summary = outcome.summary
         run.error = None if outcome.ok else (outcome.error or "unknown error")[:2000]
         run.file_errors = list(extra_file_errors or []) + list(outcome.file_errors or [])
         run.match_rate = outcome.match_rate
@@ -249,6 +250,7 @@ async def _finish(run_id: uuid.UUID, outcome: categoriser_client.Outcome,
         await db.commit()
     logger.info("categorisation run %s: %s%s", run_id, run.status,
                 f" ({run.error})" if run.error else "")
+    await results_notifier.notify(results_notifier.EXPENDITURE_READY, run.owner_ref, run.status)
 
 
 # ── reading ──────────────────────────────────────────────────────────────────

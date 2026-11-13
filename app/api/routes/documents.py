@@ -30,7 +30,7 @@ from app.schemas.document import (
     OcrTextResponse,
     OcrTriggerRequest,
 )
-from app.services import categorisation_service, document_service, request_service
+from app.services import cat_sync_service, categorisation_service, document_service, request_service
 from app.services.s3_service import (
     S3Service,
     build_ocr_json_key,
@@ -142,6 +142,9 @@ async def upload_document(
         await categorisation_service.queue_for_case(
             tenant_id=tenant.id, owner_ref=owner_ref, client_name=holder
         )
+    if cat_sync_service.wants(document_type):
+        # Income documents (and bank statements) to CAT for the income check.
+        await cat_sync_service.queue_document(tenant_id=tenant.id, document=document)
     return _to_read(document)
 
 

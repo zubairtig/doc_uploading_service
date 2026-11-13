@@ -316,6 +316,83 @@ SFS expenditure lines.
 - `POST /v1/categorisation` with `{"owner_ref": "324991", "client_name": "..."}`
   re-runs the categorisation now (`202`).
 
+### 4.8b Income documents → CAT
+When `CAT_ENABLED=true`, every upload whose type is in `CAT_DOCUMENT_TYPE_MAP`
+(through `POST /v1/documents` **or** a client upload link) is sent to CAT for
+the income check. By default that is `income_proof`, `cis_slip`,
+`credit_journal`, `pension_statement`, `tax_return`, `hmrc_webchat`,
+`employment_contract`, `other`, and `bank_statement`. Bank statements go to
+**both** LedgerFlow (expenditure) and CAT (CAT finds benefits such as PIP or
+Child Benefit on the statement). Set `CAT_SEND_BANK_STATEMENTS=false` for
+LedgerFlow only.
+
+1. The document is recorded for CAT. After `CAT_DEBOUNCE_SECONDS` (default 20s),
+   every not-yet-sent document of the case is uploaded to CAT
+   (`POST /api/applications/{case}/proof/upload/`). It is named
+   `<ref>_<type>_<document id>.<ext>`, so it can be found again in CAT.
+2. CAT is asked to read the case (`proof/recalculate/`). While CAT is busy with
+   that case (`409`), it is asked again every `CAT_BUSY_RETRY_SECONDS`.
+3. The case is polled until CAT has read our files, or for at most
+   `CAT_READ_TIMEOUT_SECONDS`. Then CAT's evidence ledger (`proof/`) is stored,
+   and its **"Proof of Income"** rows are the case's income.
+
+`CAT_CASE_MAP=324991:414290` maps a reference to the number CAT knows the
+case by, where the two differ.
+
+- `GET /v1/cat?owner_ref=...` shows each document's CAT status (`pending`,
+  `sent`, `processed`, `read_failed`, `read_timeout`, `failed`), what CAT
+  read from it, and the income rows.
+- `POST /v1/cat` with `{"owner_ref": "..."}` re-sends what CAT refused and has
+  CAT read the case again (`202`).
+
+### 4.8c Case results for Katie: `GET /v1/case-results?owner_ref=...`
+Both halves in one reply:
+```json
+{
+  "owner_ref": "428303",
+  "income": {
+    "enabled": true, "cat_case": "428303", "status": "done", "error": null,
+    "finished_at": "...",
+    "documents": [{"file_name": "payslip.pdf", "document_type": "income_proof",
+                   "status": "processed", "reading": {"gross_pay": 1800, "net_pay": 1498.2}}],
+    "income": [{"label": "Net wages", "status": "verified", "crm_value": 1500.0,
+                "doc_value": 1498.2, "bank_value": 1498.2, "variance": 1.8,
+                "pay_frequency": "monthly", "narrative": "..."}]
+  },
+  "expenditure": {
+    "enabled": true, "status": "done", "finished_at": "...", "match_rate": 0.7,
+    "summary": {
+      "period": {"first_date": "2026-09-02", "last_date": "2026-10-30",
+                 "latest_month": "2026-10", "months_covered": 1.94},
+      "expenditure": {"total_all": 2268.87, "total_latest_month": 700.67,
+        "groups": [{"name": "Communications and leisure", "total_latest_month": 610.61,
+          "labels": [{"label": "Mobile phone", "count": 6, "total_all": 325.40,
+                      "total_latest_month": 325.40, "monthly_average": 167.7,
+                      "transactions": [{"iso_date": "2026-10-22",
+                                        "description": "SKY MOBILE Direct Debit",
+                                        "amount": -196.40, "source_file": "oct.pdf"}]}]}]},
+      "categories": [{"category": "Income", "money_in": 2029.31,
+                      "subcategories": [{"subcategory": "Universal Credit", "transactions": []}]}],
+      "reconciliation": [], "warnings": []
+    },
+    "ledger": {"groups": []}
+  }
+}
+```
+- `expenditure.summary.expenditure.groups[].labels[].transactions` is the
+  **proof**: every bank line behind a figure. Each figure is given three ways:
+  over all transactions, in the latest month, and as a monthly average.
+- `expenditure.summary.categories` holds **every** row as main category →
+  subcategory, including income, transfers, creditors and gambling.
+- Each side's `status` is `null` when nothing was sent, and otherwise
+  `pending`, `processing`, `done` or `failed`.
+
+**Results-ready notice.** When `RESULTS_WEBHOOK_URL` is set, this service sends
+`POST {"event": "income.ready" | "expenditure.ready", "owner_ref", "status", "at"}`
+to it when either side finishes. The header `X-Signature: sha256=<HMAC-SHA256 of
+the body, key RESULTS_WEBHOOK_SECRET>` proves where it came from. The notice
+carries no figures: Katie reads them from `/v1/case-results` with its API key.
+
 ### 4.9 Public pages (browser, no auth)
 | Endpoint | Method | Purpose |
 | --- | --- | --- |

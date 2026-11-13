@@ -13,6 +13,11 @@ KEY = "svc-key"
 LEDGER = {"groups": [{"name": "Housing", "labels": [{"label": "Rent", "transactions": [
     {"description": "RENT LTD", "amount": -650.0}]}]}], "total_money_out": 650.0}
 
+SUMMARY = {"period": {"latest_month": "2026-10"}, "expenditure": {"groups": [
+    {"name": "Housing", "total_latest_month": 650.0, "labels": [
+        {"label": "Rent", "total_latest_month": 650.0,
+         "transactions": [{"date": "02 Oct 26", "description": "RENT LTD", "amount": -650.0}]}]}]}}
+
 
 def _cfg(**kw):
     return cc.Config(base_url="http://ledgerflow", api_key=KEY, poll_seconds=0,
@@ -26,7 +31,9 @@ async def _no_sleep(_):
 class FakeLedgerFlow:
     """Scripted job statuses; records every request it receives."""
 
-    def __init__(self, statuses, *, lose_first_job=False, submit_status=202, error=None):
+    def __init__(self, statuses, *, lose_first_job=False, submit_status=202, error=None,
+                 summary_status=200):
+        self.summary_status = summary_status
         self.statuses = list(statuses)
         self.lose_first_job = lose_first_job
         self.submit_status = submit_status
@@ -46,6 +53,10 @@ class FakeLedgerFlow:
             return httpx.Response(202, json={"job_id": f"job-{self.jobs}"})
         if path.endswith("/ledger"):
             return httpx.Response(200, json=LEDGER)
+        if path.endswith("/summary"):
+            if self.summary_status != 200:
+                return httpx.Response(self.summary_status, json={"error": "no"})
+            return httpx.Response(200, json=SUMMARY)
         job_id = path.rsplit("/", 1)[-1]
         if self.lose_first_job and job_id == "job-1":
             return httpx.Response(404, json={"error": "Not found"})
@@ -150,3 +161,14 @@ def test_only_configured_types_trigger(monkeypatch):
     assert not svc.wants("id_proof") and not svc.wants(None)
     monkeypatch.setattr(settings, "categoriser_enabled", False)
     assert not svc.wants("bank_statement")
+
+
+async def test_the_summary_comes_with_the_ledger():
+    out, _ = await _go(FakeLedgerFlow(["REVIEW_READY"]))
+    assert out.ok and out.summary == SUMMARY and out.ledger == LEDGER
+
+
+@pytest.mark.parametrize("code", [404, 500])
+async def test_a_ledgerflow_without_a_summary_still_gives_the_ledger(code):
+    out, _ = await _go(FakeLedgerFlow(["REVIEW_READY"], summary_status=code))
+    assert out.ok and out.ledger == LEDGER and out.summary is None

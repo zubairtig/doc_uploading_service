@@ -7,12 +7,12 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from slowapi import _rate_limit_exceeded_handler
 
-from app.api.routes import categorisation, document_requests, documents, health
+from app.api.routes import case_results, categorisation, document_requests, documents, health
 from app.config import settings
 from app.core.logging import configure_logging
 from app.core.rate_limit import limiter
 from app.db.session import engine
-from app.services import categorisation_service
+from app.services import cat_sync_service, categorisation_service
 from app.web.routes import router as web_router
 
 configure_logging()
@@ -25,6 +25,11 @@ async def lifespan(_: FastAPI):
         await categorisation_service.resume_unfinished()
     except Exception:  # noqa: BLE001 — never block start-up on this
         logging.getLogger(__name__).exception("could not resume categorisation runs")
+    # Passes sending documents to CAT carry on too (no-op unless CAT_ENABLED).
+    try:
+        await cat_sync_service.resume_unfinished()
+    except Exception:  # noqa: BLE001
+        logging.getLogger(__name__).exception("could not resume CAT passes")
     yield
     await engine.dispose()
 
@@ -57,6 +62,8 @@ app.include_router(health.router, tags=["health"])
 app.include_router(documents.router)
 app.include_router(document_requests.router)
 app.include_router(categorisation.router)
+app.include_router(case_results.cat_router)
+app.include_router(case_results.results_router)
 
 # Collection portal: staff pages, client upload pages, and local file serving.
 # Same app, same port — no separate frontend server.

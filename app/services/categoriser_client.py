@@ -60,6 +60,7 @@ class Outcome:
     error: str | None = None
     file_errors: list[Any] = field(default_factory=list)
     match_rate: float | None = None
+    summary: dict[str, Any] | None = None
 
 
 @dataclass
@@ -195,7 +196,20 @@ async def categorise(
             reply = await _call(client, "GET", f"/v1/statement-jobs/{job_id}/ledger")
             if reply.status_code != 200:
                 raise _refused(reply, "Fetching the ledger")
-            return Outcome(ok=True, job_id=job_id, ledger=reply.json(),
+            ledger = reply.json()
+            # The same placement as figures with proof (group -> label ->
+            # transactions, latest month, category -> subcategory). Optional:
+            # a LedgerFlow without the route still gives the ledger.
+            summary = None
+            try:
+                reply = await _call(client, "GET", f"/v1/statement-jobs/{job_id}/summary")
+                if reply.status_code == 200:
+                    summary = reply.json()
+                else:
+                    logger.info("LedgerFlow job %s: no summary (%s)", job_id, reply.status_code)
+            except CategoriserError as exc:
+                logger.warning("LedgerFlow job %s: summary unavailable: %s", job_id, exc)
+            return Outcome(ok=True, job_id=job_id, ledger=ledger, summary=summary,
                            file_errors=file_errors, match_rate=job.get("match_rate"))
         except CategoriserError as exc:
             return Outcome(ok=False, job_id=job_id, error=str(exc))

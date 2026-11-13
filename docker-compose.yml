@@ -33,6 +33,19 @@ services:
       CATEGORISER_ENABLED: ${CATEGORISER_ENABLED:-false}
       CATEGORISER_URL: ${CATEGORISER_URL:-}
       CATEGORISER_API_KEY: ${CATEGORISER_API_KEY:-}
+      # Income documents (and bank statements) to CAT for the income check.
+      # Off by default. CAT_API_KEY when the CAT team issues one; CAT_EMAIL /
+      # CAT_PASSWORD only for testing. Set these in the server .env.
+      CAT_ENABLED: ${CAT_ENABLED:-false}
+      CAT_URL: ${CAT_URL:-}
+      CAT_API_KEY: ${CAT_API_KEY:-}
+      CAT_EMAIL: ${CAT_EMAIL:-}
+      CAT_PASSWORD: ${CAT_PASSWORD:-}
+      CAT_CASE_MAP: ${CAT_CASE_MAP:-}
+      CAT_SEND_BANK_STATEMENTS: ${CAT_SEND_BANK_STATEMENTS:-true}
+      # "Results ready" notice to Katie; empty = no notice (Katie can still poll).
+      RESULTS_WEBHOOK_URL: ${RESULTS_WEBHOOK_URL:-}
+      RESULTS_WEBHOOK_SECRET: ${RESULTS_WEBHOOK_SECRET:-}
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
       - "2311:8000"

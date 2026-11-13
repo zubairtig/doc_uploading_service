@@ -145,6 +145,57 @@ class Settings(BaseSettings):
     # Times a job is re-sent after LedgerFlow lost it (restart, 404).
     categoriser_max_resubmits: int = 2
 
+    # Income documents -> CAT (case assessment tool), for the income check.
+    # Each document of a type in `cat_document_type_map` is uploaded to the
+    # case in CAT (POST /api/applications/{case}/proof/upload/), CAT is asked
+    # to read the case (proof/recalculate/), and CAT's "Proof of Income" rows
+    # are stored in `cat_run`. Off unless switched on: documents leave this
+    # service when it is. Nothing else talks to CAT from here.
+    cat_enabled: bool = False
+    cat_url: str = ""                 # e.g. http://192.168.80.52:2530 (CAT test)
+    # Sign-in: a service Bearer key from the CAT team; until CAT issues one, a
+    # CAT user's email + password (CAT's own screen API -- for testing only).
+    cat_api_key: str = ""
+    cat_email: str = ""
+    cat_password: str = ""
+    # "portal_ref:cat_case,..." where CAT knows a case by another number.
+    # Unmapped references are sent as they are (CAT redirects a case reference
+    # to its application id).
+    cat_case_map: str = ""
+    # This service's document_type -> CAT's document_type. Types not listed
+    # are never sent to CAT. Override with CAT_DOCUMENT_TYPE_MAP='{"...":"..."}'.
+    cat_document_type_map: dict[str, str] = {
+        "income_proof": "income_proof",
+        "cis_slip": "cis_slip",
+        "credit_journal": "credit_journal",
+        "pension_statement": "pension_statement",
+        "tax_return": "tax_return",
+        "hmrc_webchat": "other",
+        "employment_contract": "other",
+        "other": "other",
+        "bank_statement": "bank_statement",
+    }
+    # Bank statements go to LedgerFlow for expenditure regardless. CAT also
+    # needs them for its income check: benefits with no letter of their own
+    # (PIP, Child Benefit) are only found on the statement. False = LedgerFlow only.
+    cat_send_bank_statements: bool = True
+    # Several uploads a minute apart are sent together, then read once.
+    cat_debounce_seconds: float = 20.0
+    cat_poll_seconds: float = 15.0
+    # Give up waiting for CAT to read the case after this long.
+    cat_read_timeout_seconds: float = 15 * 60
+    # CAT reads one case at a time (409 while busy): ask again after this.
+    cat_busy_retry_seconds: float = 30.0
+    cat_request_timeout_seconds: float = 60.0
+
+    # "Results ready" notice to Katie (AI call agent). When set, a signed POST
+    # {"event", "owner_ref", "status"} is sent when CAT's income or
+    # LedgerFlow's expenditure for a case is ready; Katie then reads
+    # GET /v1/case-results. No figures travel in the notice itself.
+    results_webhook_url: str = ""
+    # HMAC-SHA256 of the raw body, sent as X-Signature: sha256=<hex>.
+    results_webhook_secret: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:
