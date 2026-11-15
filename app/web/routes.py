@@ -24,7 +24,7 @@ from app.config import settings
 from app.core import doc_types
 from app.models.document import Document
 from app.models.tenant import Tenant
-from app.services import request_service
+from app.services import cat_sync_service, categorisation_service, request_service
 from app.services.storage import get_storage_backend
 from app.web.templating import templates
 
@@ -47,7 +47,7 @@ def _link_view(req) -> dict:
 
 @router.get("/staff")
 async def staff_home(request: Request):
-    return templates.TemplateResponse("search.html", {"request": request})
+    return templates.TemplateResponse(request, "search.html", {})
 
 
 @router.post("/staff/generate")
@@ -61,8 +61,8 @@ async def staff_generate(
 
     if not name or not reference:
         return templates.TemplateResponse(
-            "search.html",
-            {"request": request, "error": "Both name and reference are required."},
+            request, "search.html",
+            {"error": "Both name and reference are required."},
         )
 
     tenant = await request_service.get_portal_tenant(db)
@@ -70,9 +70,8 @@ async def staff_generate(
         db, tenant=tenant, name=name, reference=reference
     )
     return templates.TemplateResponse(
-        "tabs.html",
+        request, "tabs.html",
         {
-            "request": request,
             "name": name,
             "reference": reference,
             "links": [_link_view(r) for r in requests],
@@ -113,8 +112,8 @@ async def staff_documents(
             for r in rows
         ]
     return templates.TemplateResponse(
-        "documents.html",
-        {"request": request, "reference": ref, "results": results},
+        request, "documents.html",
+        {"reference": ref, "results": results},
     )
 
 
@@ -131,16 +130,16 @@ async def upload_page(
     )
     if req is None:
         return templates.TemplateResponse(
-            "upload.html",
-            {"request": request, "state": "invalid", "label": doc_types.label_for(doc_type)},
+            request, "upload.html",
+            {"state": "invalid", "label": doc_types.label_for(doc_type)},
             status_code=404,
         )
     state = "live" if req.is_live else req.status  # "submitted" | "expired" | "pending(expired)"
     if state == "pending":
         state = "expired"
     return templates.TemplateResponse(
-        "upload.html",
-        {"request": request, "state": state, "link": _link_view(req)},
+        request, "upload.html",
+        {"state": state, "link": _link_view(req)},
     )
 
 
@@ -175,6 +174,13 @@ async def upload_submit(
     except Exception as exc:  # surfaces validation (size/mime) as a message
         detail = getattr(exc, "detail", None) or str(exc)
         return JSONResponse({"ok": False, "message": str(detail)}, status_code=400)
+
+    if categorisation_service.wants(req.doc_type):
+        await categorisation_service.queue_for_case(
+            tenant_id=req.tenant_id, owner_ref=req.reference, client_name=req.client_name
+        )
+    if cat_sync_service.wants(req.doc_type):
+        await cat_sync_service.queue_document(tenant_id=req.tenant_id, document=doc)
 
     return JSONResponse(
         {"ok": True, "message": f"Uploaded {doc.file_name}.", "doc_id": str(doc.id)}

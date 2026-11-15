@@ -1,9 +1,22 @@
 {# Reusable upload form. Expects `link` (dict with url, doc_type, label). #}
 <form class="upload-form" data-url="{{ link.url }}" data-key="{{ link.doc_type }}">
-  <label>Upload your {{ link.label }}</label>
-  <div class="row">
-    <div><input type="file" name="file" required></div>
-    <div style="flex:0"><button type="submit">Upload</button></div>
+  <label class="dropzone">
+    <input type="file" name="file" required aria-label="Choose your {{ link.label }}">
+    <span class="dz-ic">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M20 16v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/></svg>
+    </span>
+    <span class="dz-title"><u>Click to choose</u> or drag your {{ link.label }} here</span>
+    <span class="dz-hint">PDF, images or documents · up to {{ upload_max_mb }} MB</span>
+    <span class="dz-file">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+      <span></span>
+    </span>
+  </label>
+  <div class="upload-actions">
+    <button type="submit">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M20 16v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3"/></svg>
+      Upload document
+    </button>
+    <div class="upload-result"></div>
   </div>
-  <div class="upload-result"></div>
 </form>

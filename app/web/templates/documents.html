@@ -1,44 +1,60 @@
 {% extends "base.html" %}
 {% block title %}View Documents{% endblock %}
+{% block nav_documents %}on{% endblock %}
 {% block content %}
-  <h1>Uploaded Documents</h1>
-  <p class="sub">Enter a client reference to see their uploaded documents and preview them.</p>
+  <div class="page-head">
+    <h1>Uploaded documents</h1>
+    <p class="sub">Look up a client reference to see everything they've sent, and preview each file.</p>
+  </div>
 
   <div class="card">
     <form method="get" action="/staff/documents">
-      <div class="row">
-        <div>
-          <label>Reference number</label>
-          <input type="text" name="reference" value="{{ reference }}" placeholder="324991" required>
+      <label for="reference">Reference number</label>
+      <div class="search-inline">
+        <div class="field">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="reference" type="text" name="reference" value="{{ reference }}" placeholder="e.g. 324901" autocomplete="off" required {% if not reference %}autofocus{% endif %}>
         </div>
-        <div style="flex:0; display:flex; align-items:flex-end">
-          <button type="submit">View</button>
-        </div>
+        <button type="submit">Search</button>
       </div>
     </form>
   </div>
 
   {% if reference %}
     <div class="card">
+      <div class="results-head">
+        <h2>Reference {{ reference }}</h2>
+        <span class="count">{{ results|length }} file{{ '' if results|length == 1 else 's' }}</span>
+      </div>
       {% if results %}
-        <div style="overflow-x:auto">
-          <table style="width:100%; border-collapse:collapse; font-size:.9rem">
+        <div class="table-wrap">
+          <table>
             <thead>
-              <tr style="text-align:left; color:var(--muted)">
-                <th style="padding:8px 10px; border-bottom:1px solid var(--line)">Document type</th>
-                <th style="padding:8px 10px; border-bottom:1px solid var(--line)">File</th>
-                <th style="padding:8px 10px; border-bottom:1px solid var(--line)">Uploaded</th>
-                <th style="padding:8px 10px; border-bottom:1px solid var(--line)"></th>
+              <tr>
+                <th>File</th>
+                <th class="hide-sm">Document type</th>
+                <th class="hide-sm">Uploaded</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {% for d in results %}
+                {% set mt = d.mime_type or '' %}
+                {% set ext = (d.file_name.rsplit('.', 1)[-1] if '.' in d.file_name else 'file')[:4]|upper %}
                 <tr>
-                  <td style="padding:8px 10px; border-bottom:1px solid var(--line)">{{ d.label }}</td>
-                  <td style="padding:8px 10px; border-bottom:1px solid var(--line); word-break:break-all">{{ d.file_name }}</td>
-                  <td style="padding:8px 10px; border-bottom:1px solid var(--line); color:var(--muted)">{{ d.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</td>
-                  <td style="padding:8px 10px; border-bottom:1px solid var(--line)">
-                    <a href="{{ d.url }}" target="_blank"><button class="ghost">Preview ↗</button></a>
+                  <td>
+                    <div class="file-cell">
+                      <span class="file-ic {% if 'pdf' in mt %}pdf{% elif mt.startswith('image') %}img{% elif mt.startswith('audio') %}aud{% else %}doc{% endif %}">{{ ext }}</span>
+                      <div><span class="file-name">{{ d.file_name }}</span><span class="type-pill show-sm">{{ d.label }}</span></div>
+                    </div>
+                  </td>
+                  <td class="hide-sm"><span class="type-pill">{{ d.label }}</span></td>
+                  <td class="when hide-sm">{{ d.uploaded_at.strftime('%d %b %Y · %H:%M') }}</td>
+                  <td style="text-align:right">
+                    <a class="btn ghost" href="{{ d.url }}" target="_blank" rel="noopener">
+                      Preview
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>
+                    </a>
                   </td>
                 </tr>
               {% endfor %}
@@ -46,10 +62,14 @@
           </table>
         </div>
       {% else %}
-        <p class="sub">No documents uploaded yet for reference {{ reference }}.</p>
+        <div class="empty">
+          <div class="state-ic accent">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          </div>
+          <h2>No documents yet</h2>
+          <p class="sub">Nothing has been uploaded for reference {{ reference }} so far.</p>
+        </div>
       {% endif %}
     </div>
   {% endif %}
-
-  <a href="/staff"><button class="ghost">← Generate links</button></a>
 {% endblock %}
